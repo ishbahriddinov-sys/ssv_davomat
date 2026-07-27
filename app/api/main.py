@@ -134,6 +134,18 @@ async def health():
     return {"status": "ok", "app": settings.app_name}
 
 
+@app.get("/telegram/status", tags=["telegram"])
+async def telegram_status():
+    """Диагностика webhook (без секретов)."""
+    return {
+        "bot_enabled": getattr(app.state, "bot", None) is not None,
+        "webhook_mode": settings.bot_webhook_enabled,
+        "base_url": settings.base_url or None,
+        "webapp_url": settings.effective_webapp_url or None,
+        "has_token": bool(settings.bot_token),
+    }
+
+
 @app.post("/telegram/webhook/{secret}", tags=["telegram"])
 async def telegram_webhook(secret: str, request: Request):
     """Приём обновлений Telegram (webhook-режим)."""

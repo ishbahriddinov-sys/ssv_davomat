@@ -59,9 +59,10 @@ async def setup_webhook(bot: Bot, dp: Dispatcher) -> None:
 
 
 async def shutdown_webhook(bot: Bot) -> None:
+    # ВАЖНО: webhook НЕ удаляем — на бесплатном хостинге сервис засыпает,
+    # и удаление webhook оставило бы бота без обновлений. Webhook должен жить,
+    # чтобы входящее сообщение «будило» сервис.
     try:
-        await bot.delete_webhook()
+        await bot.session.close()
     except Exception:  # noqa: BLE001
         pass
-    finally:
-        await bot.session.close()
