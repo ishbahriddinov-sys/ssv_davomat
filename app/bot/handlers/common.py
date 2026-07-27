@@ -28,12 +28,13 @@ async def open_app(message: Message, db_user: User | None):
     if not (db_user and db_user.is_verified):
         await message.answer(t("not_authorized"))
         return
-    if not settings.webapp_url.startswith("https://"):
+    webapp = settings.effective_webapp_url
+    if not webapp.startswith("https://"):
         await message.answer("ℹ️ Mini App ҳали созланмаган (HTTPS манзил керак).")
         return
     kb = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text="🚀 Иловани очиш",
-                             web_app=WebAppInfo(url=settings.webapp_url))
+                             web_app=WebAppInfo(url=webapp))
     ]])
     await message.answer("📱 Давомат иловасини очинг:", reply_markup=kb)
 
