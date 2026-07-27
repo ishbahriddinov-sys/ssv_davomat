@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel">
+  <div class="toolbar">
+    <label>Сана <input class="form" type="date" id="rcDate"></label>
+    <select class="form" id="rcDept"><option value="">Барча бўлимлар</option></select>
+    <button class="btn sm" onclick="loadRoster()">Янгилаш</button>
+    <span style="flex:1"></span>
+    <span style="color:var(--muted);font-size:13px" id="rcHint">Ҳар бир ходимни белгиланг</span>
+  </div>
+
+  <div class="rc-summary" id="rcSummary"></div>
+  <div class="rc-list" id="rcList"><div class="empty">Юкланмоқда...</div></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function initials(name){
+  const p = (name||"?").trim().split(/\s+/);
+  return ((p[0]||"")[0]||"" ) + ((p[1]||"")[0]||"");
+}
+
+async function loadDepts(){
+  const depts = await api("/api/departments") || [];
+  const sel = document.getElementById("rcDept");
+  depts.forEach(d => sel.insertAdjacentHTML("beforeend", `<option value="${d.id}">${esc(d.name)}</option>`));
+}
+
+function curDate(){ return document.getElementById("rcDate").value; }
+
+async function loadRoster(){
+  const d = curDate();
+  const dept = document.getElementById("rcDept").value;
+  let q = "/api/rollcall?work_date=" + d + (dept ? "&department_id="+dept : "");
+  const data = await api(q);
+  if(!data) return;
+
+  document.getElementById("rcSummary").innerHTML =
+    `<div class="rc-pill"><div class="n">${data.total}</div><div class="l">Жами</div></div>
+     <div class="rc-pill present"><div class="n">${data.present}</div><div class="l">Келганлар</div></div>
+     <div class="rc-pill absent"><div class="n">${data.absent}</div><div class="l">Келмаганлар</div></div>
+     <div class="rc-pill nm"><div class="n">${data.not_marked}</div><div class="l">Белгиланмаган</div></div>`;
+
+  const list = document.getElementById("rcList");
+  if(!data.rows.length){ list.innerHTML = `<div class="empty">Ходимлар йўқ. Уларни «Ходимлар» бўлимида қўшинг.</div>`; return; }
+
+  list.innerHTML = data.rows.map(r => {
+    const cls = r.status === "present" ? "is-present" : (r.status === "absent" ? "is-absent" : "is-nm");
+    const proof = r.has_proof && r.attendance_id
+      ? `<a class="rc-proof-link" href="/api/rollcall/proof/${r.attendance_id}" target="_blank">📎 Ҳужжат</a>` : "";
+    const reasonTxt = r.absence_reason ? esc(r.absence_reason) : "";
+    const lateTag = r.is_late ? ` <span class="badge late">кечикди</span>` : "";
+    return `<div class="rc-card ${cls}" id="card-${r.user_id}">
+      <div class="rc-avatar">${esc(initials(r.full_name)).toUpperCase()}</div>
+      <div class="rc-info">
+        <b>${esc(r.full_name)}</b>${lateTag}<br>
+        <span class="meta">${esc(r.position||'—')} · ${esc(r.department||'—')} · ${esc(r.corporate_id)}</span>
+      </div>
+      <div class="rc-actions">
+        <button class="rc-btn yes ${r.status==='present'?'on':''}" onclick="markPresent(${r.user_id})">✅ Келди</button>
+        <button class="rc-btn no ${r.status==='absent'?'on':''}" onclick="toggleAbsent(${r.user_id})">❌ Келмади</button>
+      </div>
+      <div class="rc-absent-form ${r.status==='absent'?'open':''}" id="af-${r.user_id}">
+        <textarea id="reason-${r.user_id}" placeholder="Йўқлик сабаби (касаллик, хизмат сафари, оилавий ҳолатлар...)">${reasonTxt}</textarea>
+        <div class="rc-file-row">
+          <label>Исботловчи ҳужжат: <input type="file" id="file-${r.user_id}" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"></label>
+          <button class="btn sm" onclick="saveAbsent(${r.user_id})">💾 Сақлаш</button>
+          ${proof}
+          <span class="rc-saved" id="saved-${r.user_id}" style="display:none">Сақланди ✓</span>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function markPresent(uid){
+  const fd = new FormData();
+  fd.append("user_id", uid);
+  fd.append("work_date", curDate());
+  await fetch("/api/rollcall/present", { method:"POST", body: fd, credentials:"include" });
+  loadRoster();
+}
+
+function toggleAbsent(uid){
+  document.getElementById("af-"+uid).classList.toggle("open");
+}
+
+async function saveAbsent(uid){
+  const fd = new FormData();
+  fd.append("user_id", uid);
+  fd.append("work_date", curDate());
+  fd.append("reason", document.getElementById("reason-"+uid).value);
+  const f = document.getElementById("file-"+uid).files[0];
+  if(f) fd.append("file", f);
+  const res = await fetch("/api/rollcall/absent", { method:"POST", body: fd, credentials:"include" });
+  if(!res.ok){ alert("Сақлашда хатолик: HTTP " + res.status); return; }
+  const saved = document.getElementById("saved-"+uid);
+  saved.style.display = "inline";
+  setTimeout(loadRoster, 700);
+}
+
+(function init(){
+  const dt = new Date();
+  const iso = dt.getFullYear() + "-" + String(dt.getMonth()+1).padStart(2,"0") + "-" + String(dt.getDate()).padStart(2,"0");
+  document.getElementById("rcDate").value = iso;
+  loadDepts().then(loadRoster);
+})();
+</script>
+{% endblock %}

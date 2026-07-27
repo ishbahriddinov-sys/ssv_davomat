@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel">
+  <h3>📤 Ҳисоботларни экспорт қилиш</h3>
+  <div class="toolbar">
+    <label>Дан <input class="form" type="date" id="start"></label>
+    <label>Гача <input class="form" type="date" id="end"></label>
+    <select class="form" id="dept"><option value="">Барча бўлимлар</option></select>
+  </div>
+  <div class="toolbar">
+    <button class="btn sm" onclick="exp('xlsx')">📊 Excel</button>
+    <button class="btn sm" onclick="exp('pdf')">📄 PDF</button>
+    <button class="btn sm" onclick="exp('csv')">📃 CSV</button>
+  </div>
+  <p style="color:var(--muted);font-size:13px;margin-top:10px">
+    Кунлик, ҳафталик ва ойлик ҳисоботлар — барча бўлимлар бўйича ёки танланган бўлим бўйича.
+  </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function load(){
+  const depts = await api("/api/departments") || [];
+  const sel = document.getElementById("dept");
+  depts.forEach(d => sel.insertAdjacentHTML("beforeend", `<option value="${d.id}">${esc(d.name)}</option>`));
+}
+function exp(fmt){
+  const s = document.getElementById("start").value, e = document.getElementById("end").value;
+  const dept = document.getElementById("dept").value;
+  const p = ["fmt="+fmt];
+  if (s) p.push("start="+s);
+  if (e) p.push("end="+e);
+  if (dept) p.push("department_id="+dept);
+  window.open("/api/reports/export?" + p.join("&"), "_blank");
+}
+load();
+</script>
+{% endblock %}

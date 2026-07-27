@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel">
+  <div class="toolbar">
+    <label>Дан <input class="form" type="date" id="start"></label>
+    <label>Гача <input class="form" type="date" id="end"></label>
+    <button class="btn sm" onclick="load()">Кўрсатиш</button>
+  </div>
+  <table>
+    <thead><tr><th>Сана</th><th>Ходим</th><th>Келиш</th><th>Кечикиш</th><th>Гео</th><th>Ҳолат</th></tr></thead>
+    <tbody id="rows"><tr><td colspan="6" class="empty">Юкланмоқда...</td></tr></tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let userMap = {};
+async function load() {
+  if (!Object.keys(userMap).length) {
+    const users = await api("/api/users") || [];
+    userMap = Object.fromEntries(users.map(u=>[u.id, u.full_name]));
+  }
+  const s = document.getElementById("start").value, e = document.getElementById("end").value;
+  let q = "/api/attendance";
+  const params = [];
+  if (s) params.push("start="+s);
+  if (e) params.push("end="+e);
+  if (params.length) q += "?" + params.join("&");
+  const data = await api(q) || [];
+  const rows = document.getElementById("rows");
+  if (!data.length) { rows.innerHTML = `<tr><td colspan="6" class="empty">Ёзувлар йўқ</td></tr>`; return; }
+  rows.innerHTML = data.map(a => `<tr>
+    <td>${a.work_date}</td>
+    <td>${esc(userMap[a.user_id]||('#'+a.user_id))}</td>
+    <td>${fmtTime(a.check_in)}</td>
+    <td>${a.late_minutes ? a.late_minutes+' дақ' : '—'}</td>
+    <td>${a.geo_verified ? '✅' : '—'}</td>
+    <td>${badge(a.status)}</td>
+  </tr>`).join("");
+}
+load();
+</script>
+{% endblock %}

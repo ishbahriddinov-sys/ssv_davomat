@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel">
+  <div class="toolbar">
+    <input class="form" id="d_name" placeholder="Бўлим номи">
+    <input class="form" id="d_code" placeholder="Код">
+    <button class="btn sm" onclick="createDept()">➕ Бўлим яратиш</button>
+  </div>
+  <table>
+    <thead><tr><th>ID</th><th>Номи</th><th>Код</th><th>Раҳбар</th><th>Ҳолат</th></tr></thead>
+    <tbody id="rows"><tr><td colspan="5" class="empty">Юкланмоқда...</td></tr></tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function load() {
+  const depts = await api("/api/departments") || [];
+  const rows = document.getElementById("rows");
+  if (!depts.length) { rows.innerHTML = `<tr><td colspan="5" class="empty">Бўлимлар йўқ</td></tr>`; return; }
+  rows.innerHTML = depts.map(d => `<tr>
+    <td>${d.id}</td><td>${esc(d.name)}</td><td>${esc(d.code||'—')}</td>
+    <td>${d.manager_id ? '#'+d.manager_id : '—'}</td>
+    <td>${d.is_active ? '<span class="badge present">фаол</span>' : '<span class="badge absent">—</span>'}</td>
+  </tr>`).join("");
+}
+async function createDept() {
+  const name = document.getElementById("d_name").value.trim();
+  if (!name) { alert("Номини киритинг"); return; }
+  try {
+    await api("/api/departments", { method:"POST", body: JSON.stringify({
+      name, code: document.getElementById("d_code").value.trim() || null }) });
+    document.getElementById("d_name").value=""; document.getElementById("d_code").value="";
+    load();
+  } catch(e){ alert("Хатолик: " + e.message); }
+}
+load();
+</script>
+{% endblock %}

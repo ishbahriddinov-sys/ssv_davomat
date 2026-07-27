@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel">
+  <div class="toolbar">
+    <h3 style="margin:0;flex:1">👥 Ходимлар</h3>
+    <button class="btn sm" onclick="toggleForm()">➕ Қўшиш</button>
+  </div>
+
+  <div id="addForm" style="display:none;margin-bottom:18px;padding:16px;background:var(--blue-light);border-radius:12px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      <input class="form" id="f_cid" placeholder="Корпоратив ID">
+      <input class="form" id="f_name" placeholder="Ф.И.Ш.">
+      <input class="form" id="f_phone" placeholder="Телефон">
+      <input class="form" id="f_pos" placeholder="Лавозим">
+      <select class="form" id="f_dept"><option value="">— Бўлим —</option></select>
+      <select class="form" id="f_role">
+        <option value="employee">Ходим</option>
+        <option value="manager">Раҳбар</option>
+        <option value="hr">HR (Оператор)</option>
+        <option value="admin">Администратор</option>
+      </select>
+    </div>
+    <button class="btn sm" style="margin-top:10px" onclick="createUser()">Сақлаш</button>
+  </div>
+
+  <table>
+    <thead><tr><th>ID</th><th>Корп. ID</th><th>Ф.И.Ш.</th><th>Лавозим</th><th>Роль</th><th>Ҳолат</th></tr></thead>
+    <tbody id="rows"><tr><td colspan="6" class="empty">Юкланмоқда...</td></tr></tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let depts = [];
+const ROLE_UZ = { employee:"Ходим", manager:"Раҳбар", hr:"Оператор (HR)", admin:"Администратор" };
+function toggleForm(){ const f=document.getElementById("addForm"); f.style.display = f.style.display==="none"?"block":"none"; }
+
+async function load() {
+  depts = await api("/api/departments") || [];
+  const sel = document.getElementById("f_dept");
+  depts.forEach(d => sel.insertAdjacentHTML("beforeend", `<option value="${d.id}">${esc(d.name)}</option>`));
+
+  const users = await api("/api/users") || [];
+  const dmap = Object.fromEntries(depts.map(d=>[d.id,d.name]));
+  const rows = document.getElementById("rows");
+  if (!users.length) { rows.innerHTML = `<tr><td colspan="6" class="empty">Маълумот йўқ</td></tr>`; return; }
+  rows.innerHTML = users.map(u => `<tr>
+    <td>${u.id}</td><td>${esc(u.corporate_id)}</td><td>${esc(u.full_name)}</td>
+    <td>${esc(u.position||'—')}</td>
+    <td><span class="badge role">${esc(ROLE_UZ[u.role]||u.role)}</span></td>
+    <td>${u.is_active ? (u.is_verified?'<span class="badge present">фаол</span>':'<span class="badge late">боғланмаган</span>') : '<span class="badge absent">ўчирилган</span>'}</td>
+  </tr>`).join("");
+}
+
+async function createUser() {
+  const body = {
+    corporate_id: document.getElementById("f_cid").value.trim(),
+    full_name: document.getElementById("f_name").value.trim(),
+    phone: document.getElementById("f_phone").value.trim() || null,
+    position: document.getElementById("f_pos").value.trim() || null,
+    department_id: document.getElementById("f_dept").value ? +document.getElementById("f_dept").value : null,
+    role: document.getElementById("f_role").value
+  };
+  if (!body.corporate_id || !body.full_name) { alert("ID ва Ф.И.Ш. ни тўлдиринг"); return; }
+  try { await api("/api/users", { method:"POST", body: JSON.stringify(body) }); toggleForm(); load(); }
+  catch(e){ alert("Хатолик: " + e.message); }
+}
+load();
+</script>
+{% endblock %}

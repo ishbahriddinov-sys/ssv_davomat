@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="uz-Cyrl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} — ЎзР ССВ Давомат ҳисоби</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="/static/style.css?v=3">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="/static/logo.png" alt="Логотип" class="brand-logo" width="40" height="40">
+        <div><b>ЎзР ССВ</b><br><span>Давомат ҳисоби</span></div>
+      </div>
+      <nav class="nav">
+        {% set icons = {'dashboard':'📊','rollcall':'✅','employees':'👥','attendance':'🕐','departments':'🏢','reports':'📤','logs':'📋','settings':'⚙️'} %}
+        {% for key, label in pages.items() %}
+          <a href="/admin/{{ key }}" class="{{ 'active' if page == key else '' }}">
+            <span>{{ icons[key] }}</span> {{ label }}
+          </a>
+        {% endfor %}
+      </nav>
+      <div class="foot">
+        <a href="/admin/logout">🚪 Чиқиш</a>
+      </div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        {% set role_names = {'admin':'Администратор','hr':'Оператор (HR)','manager':'Раҳбар','employee':'Ходим'} %}
+        <h2>{{ title }}</h2>
+        <span class="chip">Роль: {{ role_names.get(role, role) }}</span>
+      </div>
+      <div class="content">
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+  </div>
+  <script src="/static/app.js?v=3"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="uz-Cyrl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Кириш — ЎзР ССВ Давомат ҳисоби</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="/static/style.css?v=3">
+</head>
+<body>
+  <div class="login-wrap">
+    <form class="login-card" method="post" action="/admin/login">
+      <div class="login-logo"><img src="/static/logo.png" alt="Логотип" class="login-logo-img" width="96" height="96"></div>
+      <h1>Давомат ҳисоби тизими</h1>
+      <p class="sub">Ўзбекистон Республикаси Соғлиқни сақлаш вазирлиги</p>
+      {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+      <div class="field">
+        <label>Логин</label>
+        <input name="username" autocomplete="username" required autofocus>
+      </div>
+      <div class="field">
+        <label>Парол</label>
+        <input name="password" type="password" autocomplete="current-password" required>
+      </div>
+      <div class="field">
+        <label>2FA коди (агар ёқилган бўлса)</label>
+        <input name="totp_code" inputmode="numeric" placeholder="000000">
+      </div>
+      <button class="btn" type="submit">Кириш</button>
+    </form>
+  </div>
+</body>
+</html>

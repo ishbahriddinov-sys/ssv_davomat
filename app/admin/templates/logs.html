@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel">
+  <h3>📋 Амаллар журнали</h3>
+  <table>
+    <thead><tr><th>Вақт</th><th>Амал</th><th>Объект</th><th>ID</th><th>Фойдаланувчи (TG)</th><th>Тафсилот</th></tr></thead>
+    <tbody id="rows"><tr><td colspan="6" class="empty">Юкланмоқда...</td></tr></tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function load() {
+  const logs = await api("/api/logs?limit=200") || [];
+  const rows = document.getElementById("rows");
+  if (!logs.length) { rows.innerHTML = `<tr><td colspan="6" class="empty">Журнал бўш</td></tr>`; return; }
+  rows.innerHTML = logs.map(l => `<tr>
+    <td>${new Date(l.created_at).toLocaleString("ru-RU")}</td>
+    <td><b>${esc(l.action)}</b></td>
+    <td>${esc(l.entity||'—')}</td>
+    <td>${esc(l.entity_id||'—')}</td>
+    <td>${esc(l.actor_telegram_id||'—')}</td>
+    <td>${esc(l.details||'—')}</td>
+  </tr>`).join("");
+}
+load();
+</script>
+{% endblock %}

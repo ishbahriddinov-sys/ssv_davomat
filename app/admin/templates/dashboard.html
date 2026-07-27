@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="stats" id="stats"></div>
+
+<div class="grid-2">
+  <div class="panel">
+    <h3>📈 Давомат динамикаси (30 кун)</h3>
+    <canvas id="trendChart" height="110"></canvas>
+  </div>
+  <div class="panel">
+    <h3>🏢 Бўлимлар рейтинги (%)</h3>
+    <canvas id="rankChart" height="180"></canvas>
+  </div>
+</div>
+
+<div class="grid-1">
+  <div class="panel">
+    <h3>🟡 Кунлар бўйича кечикишлар</h3>
+    <canvas id="lateChart" height="70"></canvas>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const NAVY = "#143e6b", BLUE = "#2f80ed", SKY = "#56a0e8", AMBER = "#e0a100";
+
+function statCard(label, value, cls, suffix) {
+  return `<div class="stat-card ${cls||''}"><div class="label">${label}</div>
+    <div class="value">${value}<small>${suffix||''}</small></div></div>`;
+}
+
+async function load() {
+  const s = await api("/api/dashboard/stats");
+  if (!s) return;
+  document.getElementById("stats").innerHTML =
+    statCard("Жами ходимлар", s.total_users, "") +
+    statCard("Бугун ишда", s.present_today, "green") +
+    statCard("Кечиккан", s.late_today, "amber") +
+    statCard("Йўқ", s.absent_today, "red") +
+    statCard("Таътилда", s.on_leave_today, "") +
+    statCard("Давомат", s.attendance_rate, "", " %") +
+    statCard("Бўлимлар", s.total_departments, "");
+
+  const trend = await api("/api/dashboard/trend?days=30");
+  new Chart(document.getElementById("trendChart"), {
+    type: "line",
+    data: { labels: trend.labels, datasets: [{
+      label: "Келганлар", data: trend.values, borderColor: BLUE,
+      backgroundColor: "rgba(47,128,237,.12)", fill: true, tension: .35, pointRadius: 2 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+
+  const rank = await api("/api/dashboard/ranking");
+  new Chart(document.getElementById("rankChart"), {
+    type: "bar",
+    data: { labels: rank.labels, datasets: [{ label: "%", data: rank.values, backgroundColor: NAVY }] },
+    options: { indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { max: 100 } } }
+  });
+
+  const late = await api("/api/dashboard/late?days=30");
+  new Chart(document.getElementById("lateChart"), {
+    type: "bar",
+    data: { labels: late.labels, datasets: [{ label: "Кечикишлар", data: late.values, backgroundColor: AMBER }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+}
+load();
+</script>
+{% endblock %}

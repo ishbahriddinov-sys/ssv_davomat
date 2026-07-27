@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="uz-Cyrl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Давомат</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root{
+      --bg: var(--tg-theme-bg-color, #ffffff);
+      --text: var(--tg-theme-text-color, #1b2733);
+      --hint: var(--tg-theme-hint-color, #7688a1);
+      --card: var(--tg-theme-secondary-bg-color, #f4f7fb);
+      --btn: var(--tg-theme-button-color, #2f80ed);
+      --btn-text: var(--tg-theme-button-text-color, #ffffff);
+      --navy:#143e6b; --green:#22a06b; --red:#d64545; --amber:#e0a100; --border:#e2e9f2;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:15px;padding:14px 12px 40px}
+    .head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .head img{width:44px;height:44px;border-radius:50%;background:#fff;object-fit:contain}
+    .head b{font-size:16px;display:block}
+    .head .role{font-size:12px;color:var(--hint)}
+    .loader{text-align:center;color:var(--hint);padding:40px 0}
+    .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+    .pill{background:var(--card);border-radius:12px;padding:10px 6px;text-align:center}
+    .pill .n{font-size:20px;font-weight:700}
+    .pill .l{font-size:10.5px;color:var(--hint)}
+    .pill.g{color:var(--green)} .pill.r{color:var(--red)} .pill.a{color:var(--amber)}
+    .card{background:var(--card);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+    .row{display:flex;align-items:center;gap:10px}
+    .avatar{width:38px;height:38px;border-radius:50%;background:var(--btn);color:var(--btn-text);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+    .info{flex:1;min-width:0}
+    .info b{font-size:14.5px}
+    .info .meta{font-size:12px;color:var(--hint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .actions{display:flex;gap:6px;margin-top:10px}
+    .btn{flex:1;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:600;cursor:pointer;background:#e6ecf5;color:var(--navy)}
+    .btn.yes.on{background:var(--green);color:#fff}
+    .btn.no.on{background:var(--red);color:#fff}
+    .absent-form{margin-top:10px;display:none}
+    .absent-form.open{display:block}
+    textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:9px;font-size:14px;font-family:inherit;min-height:52px;margin-bottom:8px;background:var(--bg);color:var(--text)}
+    .file{font-size:13px;margin-bottom:8px;display:block}
+    .save{background:var(--btn);color:var(--btn-text);width:100%}
+    .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:600}
+    .badge.present{background:#e5f5ee;color:var(--green)}
+    .badge.late{background:#fdf3d9;color:var(--amber)}
+    .badge.absent{background:#fdeaea;color:var(--red)}
+    .badge.nm{background:#eef1f5;color:var(--hint)}
+    .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .stat{background:var(--card);border-radius:14px;padding:16px}
+    .stat .v{font-size:28px;font-weight:700;color:var(--navy)}
+    .stat .k{font-size:12.5px;color:var(--hint)}
+    .hrow{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+    .err{text-align:center;color:var(--red);padding:30px 16px;line-height:1.5}
+    .proof{font-size:12.5px;color:var(--btn);text-decoration:none;margin-left:6px}
+    h3{font-size:15px;margin:4px 0 12px}
+    input[type=date]{border:1px solid var(--border);border-radius:10px;padding:8px 10px;font-size:14px;background:var(--bg);color:var(--text);margin-bottom:12px}
+    .saved{color:var(--green);font-size:12.5px}
+  </style>
+</head>
+<body>
+  <div class="head" id="head" style="display:none">
+    <img src="/static/logo.png" alt="logo">
+    <div><b id="hName">—</b><span class="role" id="hRole"></span></div>
+  </div>
+  <div id="app"><div class="loader">Юкланмоқда…</div></div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+const INIT = tg?.initData || "";
+const app = document.getElementById("app");
+
+function esc(s){return (s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function initials(n){const p=(n||"?").trim().split(/\s+/);return((p[0]||"")[0]||"")+((p[1]||"")[0]||"");}
+const ROLE_UZ={admin:"Администратор",hr:"Оператор (HR)",manager:"Раҳбар",employee:"Ходим"};
+const STATUS={present:["келди","present"],late:["кечикди","late"],absent:["келмади","absent"],completed:["якунланди","present"],on_leave:["таътилда","present"],not_marked:["белгиланмаган","nm"]};
+
+async function wapi(path, opts={}){
+  opts.headers = Object.assign({"X-Telegram-Init-Data": INIT}, opts.headers||{});
+  const res = await fetch(path, opts);
+  if(!res.ok){ const t=await res.json().catch(()=>({})); throw new Error(t.detail||("HTTP "+res.status)); }
+  return res.json();
+}
+
+function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+
+async function boot(){
+  if(!INIT){ app.innerHTML=`<div class="err">Илова Telegram ичида очилиши керак.</div>`; return; }
+  let me;
+  try{ me = await wapi("/api/webapp/me"); }
+  catch(e){ app.innerHTML=`<div class="err">${esc(e.message)}</div>`; return; }
+
+  document.getElementById("head").style.display="flex";
+  document.getElementById("hName").textContent = me.name;
+  document.getElementById("hRole").textContent = (ROLE_UZ[me.role]||me.role) + (me.department? " · "+me.department : "");
+
+  if(me.role==="hr") return renderRollcall();
+  if(me.role==="admin") return renderStats();
+  return renderHistory();
+}
+
+// ---------- Йўқлама (оператор) ----------
+async function renderRollcall(){
+  app.innerHTML = `<h3>✅ Йўқлама</h3>
+    <input type="date" id="d" value="${today()}">
+    <div class="summary" id="sum"></div>
+    <div id="list"><div class="loader">Юкланмоқда…</div></div>`;
+  document.getElementById("d").addEventListener("change", loadRoster);
+  loadRoster();
+}
+async function loadRoster(){
+  const d = document.getElementById("d").value;
+  let data; try{ data = await wapi("/api/webapp/rollcall?work_date="+d); }
+  catch(e){ document.getElementById("list").innerHTML=`<div class="err">${esc(e.message)}</div>`; return; }
+  document.getElementById("sum").innerHTML =
+    `<div class="pill"><div class="n">${data.total}</div><div class="l">Жами</div></div>
+     <div class="pill g"><div class="n">${data.present}</div><div class="l">Келди</div></div>
+     <div class="pill r"><div class="n">${data.absent}</div><div class="l">Келмади</div></div>
+     <div class="pill a"><div class="n">${data.not_marked}</div><div class="l">Белгиланмаган</div></div>`;
+  const list = document.getElementById("list");
+  if(!data.rows.length){ list.innerHTML=`<div class="err">Ходимлар йўқ.</div>`; return; }
+  list.innerHTML = data.rows.map(r=>{
+    const proof = r.has_proof&&r.attendance_id ? `<a class="proof" href="/api/rollcall/proof/${r.attendance_id}" target="_blank">📎</a>`:"";
+    return `<div class="card" id="c${r.user_id}">
+      <div class="row">
+        <div class="avatar">${esc(initials(r.full_name)).toUpperCase()}</div>
+        <div class="info"><b>${esc(r.full_name)}</b>${r.is_late?' <span class="badge late">кечикди</span>':''}
+          <div class="meta">${esc(r.position||'—')} · ${esc(r.department||'—')}</div></div>
+      </div>
+      <div class="actions">
+        <button class="btn yes ${r.status==='present'?'on':''}" onclick="mark(${r.user_id},'present')">✅ Келди</button>
+        <button class="btn no ${r.status==='absent'?'on':''}" onclick="toggleAbsent(${r.user_id})">❌ Келмади</button>
+      </div>
+      <div class="absent-form ${r.status==='absent'?'open':''}" id="af${r.user_id}">
+        <textarea id="rs${r.user_id}" placeholder="Йўқлик сабаби…">${esc(r.absence_reason||'')}</textarea>
+        <label class="file">Исботловчи ҳужжат: <input type="file" id="fl${r.user_id}" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"></label>
+        <button class="btn save" onclick="mark(${r.user_id},'absent')">💾 Сақлаш ${proof}</button>
+        <span class="saved" id="sv${r.user_id}"></span>
+      </div>
+    </div>`;
+  }).join("");
+}
+function toggleAbsent(uid){ document.getElementById("af"+uid).classList.toggle("open"); }
+async function mark(uid, kind){
+  const fd = new FormData();
+  fd.append("user_id", uid); fd.append("work_date", document.getElementById("d").value);
+  let url = "/api/webapp/rollcall/present";
+  if(kind==="absent"){
+    url = "/api/webapp/rollcall/absent";
+    fd.append("reason", document.getElementById("rs"+uid).value);
+    const f = document.getElementById("fl"+uid).files[0];
+    if(f) fd.append("file", f);
+  }
+  try{ await wapi(url,{method:"POST",body:fd}); if(tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success"); loadRoster(); }
+  catch(e){ alert(e.message); }
+}
+
+// ---------- Тарих (ходим) ----------
+async function renderHistory(){
+  let data; try{ data = await wapi("/api/webapp/history"); }
+  catch(e){ app.innerHTML=`<div class="err">${esc(e.message)}</div>`; return; }
+  const rows = data.rows.map(a=>{
+    const st = STATUS[a.is_late?"late":a.status] || STATUS[a.status] || [a.status,"nm"];
+    return `<div class="hrow"><span>${a.date}</span>
+      <span>${a.check_in?("келиш "+a.check_in):"—"} <span class="badge ${st[1]}">${st[0]}</span></span></div>`;
+  }).join("") || `<div class="err">Тарих бўш.</div>`;
+  app.innerHTML = `<h3>📊 Давомат тарихи (30 кун)</h3>
+    <div class="summary">
+      <div class="pill a"><div class="n">${data.late}</div><div class="l">Кечикиш</div></div>
+      <div class="pill r"><div class="n">${data.absent}</div><div class="l">Йўқ</div></div>
+    </div>
+    <div class="card">${rows}</div>`;
+}
+
+// ---------- Статистика (админ) ----------
+async function renderStats(){
+  let s; try{ s = await wapi("/api/webapp/stats"); }
+  catch(e){ app.innerHTML=`<div class="err">${esc(e.message)}</div>`; return; }
+  app.innerHTML = `<h3>📊 Умумий статистика</h3>
+    <div class="stat-grid">
+      <div class="stat"><div class="v">${s.total_users}</div><div class="k">Жами ходимлар</div></div>
+      <div class="stat"><div class="v">${s.present_today}</div><div class="k">Бугун ишда</div></div>
+      <div class="stat"><div class="v">${s.late_today}</div><div class="k">Кечиккан</div></div>
+      <div class="stat"><div class="v">${s.absent_today}</div><div class="k">Йўқ</div></div>
+      <div class="stat"><div class="v">${s.on_leave_today}</div><div class="k">Таътилда</div></div>
+      <div class="stat"><div class="v">${s.attendance_rate}%</div><div class="k">Давомат</div></div>
+    </div>`;
+}
+
+boot();
+</script>
+</body>
+</html>

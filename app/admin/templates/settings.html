@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="grid-2">
+  <div class="panel">
+    <h3>⚙️ Тизим параметрлари</h3>
+    <table>
+      <tbody id="cfg"><tr><td class="empty">Юкланмоқда...</td></tr></tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <h3>🔐 Хавфсизлик</h3>
+    <ul style="line-height:2;color:var(--text);padding-left:18px">
+      <li>Ролларни ажратиш (RBAC)</li>
+      <li>Барча амаллар журнали (аудит)</li>
+      <li>Шахсий маълумотларни шифрлаш (Fernet)</li>
+      <li>Администраторлар учун 2FA (TOTP)</li>
+      <li>Маълумотлар базасини заҳиралаш (pg_dump)</li>
+      <li>Паролни танлашдан ҳимоя (кириш блокировкаси)</li>
+    </ul>
+    <p style="color:var(--muted);font-size:13px;margin-top:12px">
+      Жорий фойдаланувчи профили:
+    </p>
+    <div id="me" style="margin-top:8px"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const ROLE_UZ = { employee:"Ходим", manager:"Раҳбар", hr:"Оператор (HR)", admin:"Администратор" };
+async function load() {
+  const me = await api("/api/auth/me");
+  if (me) document.getElementById("me").innerHTML =
+    `<b>${esc(me.full_name||me.username)}</b> — <span class="badge role">${esc(ROLE_UZ[me.role]||me.role)}</span>
+     ${me.totp_enabled ? '<span class="badge present">2FA ёқилган</span>' : '<span class="badge late">2FA ўчирилган</span>'}`;
+
+  const rows = [
+    ["Вақт минтақаси", "Asia/Tashkent"],
+    ["Иш куни бошланиши", "09:30"],
+    ["Иш куни тугаши", "18:00"],
+    ["Кечикиш чегараси", "10 дақиқа"],
+    ["Геозона радиуси", "250 м"],
+    ["QR амал қилиш муддати", "120 сония"],
+    ["Интерфейс тили", "🇺🇿 Ўзбекча (кирилл)"],
+  ];
+  document.getElementById("cfg").innerHTML = rows.map(r =>
+    `<tr><td style="color:var(--muted)">${r[0]}</td><td><b>${r[1]}</b></td></tr>`).join("");
+}
+load();
+</script>
+{% endblock %}

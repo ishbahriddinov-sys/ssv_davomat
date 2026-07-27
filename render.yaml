@@ -1,0 +1,46 @@
+# Render Blueprint — деплой одним сервисом (FastAPI + панель + Mini App + бот webhook).
+# База данных — внешняя (Supabase), задаётся через DATABASE_URL.
+# После деплоя: Render → Blueprints → New → указать этот репозиторий.
+services:
+  - type: web
+    name: ssv-davomat
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: DEBUG
+        value: "false"
+      - key: DEFAULT_LANGUAGE
+        value: "uz"
+      - key: TIMEZONE
+        value: "Asia/Tashkent"
+      # Бот работает через webhook внутри этого же сервиса
+      - key: BOT_WEBHOOK_ENABLED
+        value: "true"
+      # На бесплатном плане Redis нет — FSM хранится в памяти
+      - key: REDIS_ENABLED
+        value: "false"
+      # При старте создаёт таблицы и учётку admin (идемпотентно)
+      - key: AUTO_INIT_DB
+        value: "true"
+      # Секреты генерируются Render'ом
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: WEBHOOK_SECRET
+        generateValue: true
+      # --- Задать вручную в дашборде Render (Environment) ---
+      - key: BOT_TOKEN
+        sync: false          # токен вашего бота
+      - key: DATABASE_URL
+        sync: false          # строка подключения Supabase (postgresql://...)
+      - key: ENCRYPTION_KEY
+        sync: false          # ключ Fernet: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      - key: BOOTSTRAP_ADMINS
+        sync: false          # (необязательно) Telegram ID администраторов через запятую
