@@ -12,7 +12,8 @@ from app.config import settings
 
 def build_bot() -> Bot:
     return Bot(
-        token=settings.bot_token,
+        # strip() — убираем случайные пробелы/переносы строки при вставке токена
+        token=settings.bot_token.strip(),
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
 

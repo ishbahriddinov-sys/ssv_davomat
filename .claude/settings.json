@@ -45,7 +45,8 @@
       "Bash(curl -s -b h.txt http://localhost:8000/admin/dashboard)",
       "Bash(curl -s -o /dev/null -w \"panel -> %{http_code}\\\\n\" -L http://localhost:8000/admin/login)",
       "Bash(curl -s -o /dev/null -w \"webhook -> %{http_code}\\\\n\" -X POST http://localhost:8000/telegram/webhook/hook -H \"Content-Type: application/json\" -d '{}')",
-      "Bash(docker compose -p attendance run --rm -e DATABASE_URL=postgresql://postgres.hhlpglucfakokcmjomic:%21%267.M4VQ.-djtQa@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres -e REDIS_ENABLED=false -e BOT_WEBHOOK_ENABLED=false -e DEBUG=false api python -c ' *)"
+      "Bash(docker compose -p attendance run --rm -e DATABASE_URL=postgresql://postgres.hhlpglucfakokcmjomic:%21%267.M4VQ.-djtQa@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres -e REDIS_ENABLED=false -e BOT_WEBHOOK_ENABLED=false -e DEBUG=false api python -c ' *)",
+      "Bash(git push *)"
     ]
   }
 }

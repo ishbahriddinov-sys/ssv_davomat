@@ -50,30 +50,37 @@ async def lifespan(app: FastAPI):
             shutdown_webhook,
         )
 
-        bot, dp = create_bot_and_dispatcher()
-        app.state.bot, app.state.dp = bot, dp
-        await setup_webhook(bot, dp)
+        try:
+            bot, dp = create_bot_and_dispatcher()
+            app.state.bot, app.state.dp = bot, dp
+            await setup_webhook(bot, dp)
+        except Exception as exc:  # noqa: BLE001
+            from app.core.logging import get_logger
+
+            get_logger(__name__).error("webhook setup: %s", exc)
+            app.state.bot = None
 
         # Фоновые напоминания (лучшие усилия; на «спящем» хосте могут пропускаться)
-        try:
-            from apscheduler.schedulers.asyncio import AsyncIOScheduler
-            from apscheduler.triggers.cron import CronTrigger
+        if app.state.bot is not None:
+            try:
+                from apscheduler.schedulers.asyncio import AsyncIOScheduler
+                from apscheduler.triggers.cron import CronTrigger
 
-            from app.services import scheduler as sched
+                from app.services import scheduler as sched
 
-            scheduler = AsyncIOScheduler(timezone=settings.timezone)
-            ws, we = settings.work_start_time, settings.work_end_time
-            scheduler.add_job(sched.remind_not_checked_in,
-                              CronTrigger(day_of_week="mon-fri", hour=ws.hour,
-                                          minute=(ws.minute + 15) % 60))
-            scheduler.add_job(sched.remind_checkout,
-                              CronTrigger(day_of_week="mon-fri", hour=we.hour,
-                                          minute=max(we.minute - 10, 0)))
-            scheduler.add_job(sched.flush_notifications, "interval",
-                              minutes=1, args=[bot])
-            scheduler.start()
-        except Exception:  # noqa: BLE001
-            pass
+                scheduler = AsyncIOScheduler(timezone=settings.timezone)
+                ws, we = settings.work_start_time, settings.work_end_time
+                scheduler.add_job(sched.remind_not_checked_in,
+                                  CronTrigger(day_of_week="mon-fri", hour=ws.hour,
+                                              minute=(ws.minute + 15) % 60))
+                scheduler.add_job(sched.remind_checkout,
+                                  CronTrigger(day_of_week="mon-fri", hour=we.hour,
+                                              minute=max(we.minute - 10, 0)))
+                scheduler.add_job(sched.flush_notifications, "interval",
+                                  minutes=1, args=[app.state.bot])
+                scheduler.start()
+            except Exception:  # noqa: BLE001
+                pass
 
     yield
 

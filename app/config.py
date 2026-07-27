@@ -89,8 +89,9 @@ class Settings(BaseSettings):
     @property
     def sqlalchemy_dsn(self) -> str:
         if self.database_url:
-            # Supabase/облако отдают postgresql:// — приводим к async-драйверу asyncpg
-            url = self.database_url
+            # Supabase/облако отдают postgresql:// — приводим к async-драйверу asyncpg.
+            # strip() — на случай пробелов/переносов строки при вставке в панель хостинга.
+            url = self.database_url.strip()
             if url.startswith("postgresql://"):
                 url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
             elif url.startswith("postgres://"):
