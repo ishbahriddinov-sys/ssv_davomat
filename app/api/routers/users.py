@@ -34,7 +34,10 @@ async def list_users(
     session: AsyncSession = Depends(get_db),
     admin: AdminUser = Depends(get_current_admin),
 ):
-    res = await session.execute(select(User).order_by(User.id))
+    # Администраторы — системные учётки, в списке сотрудников не показываются
+    res = await session.execute(
+        select(User).where(User.role != Role.ADMIN).order_by(User.id)
+    )
     return [_to_out(u) for u in res.scalars().all()]
 
 

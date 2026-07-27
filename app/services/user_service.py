@@ -86,7 +86,10 @@ def _digits(value: str) -> str:
 
 
 async def count_users(session: AsyncSession) -> int:
-    res = await session.execute(select(func.count(User.id)))
+    # Считаем только сотрудников: администраторы — системные учётки, не сотрудники
+    res = await session.execute(
+        select(func.count(User.id)).where(User.role != Role.ADMIN)
+    )
     return res.scalar_one()
 
 
