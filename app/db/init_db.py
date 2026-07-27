@@ -43,15 +43,6 @@ async def seed() -> None:
             )
             logger.info("Создан администратор панели: admin / admin123 (СМЕНИТЕ ПАРОЛЬ!)")
 
-        # --- Демонстрационный отдел ---
-        res = await session.execute(select(Department).limit(1))
-        dept = res.scalar_one_or_none()
-        if not dept:
-            dept = Department(name="Аппарат Министерства", code="HQ")
-            session.add(dept)
-            await session.flush()
-            logger.info("Создан демонстрационный отдел.")
-
         # --- Bootstrap-администраторы бота из .env ---
         for tg_id in settings.bootstrap_admin_ids:
             res = await session.execute(select(User).where(User.telegram_id == tg_id))
@@ -67,7 +58,7 @@ async def seed() -> None:
                     full_name_enc=security.encrypt("Администратор бота"),
                     telegram_id=tg_id,
                     role=Role.ADMIN,
-                    department_id=dept.id,
+                    department_id=None,
                     is_verified=True,
                 )
             )
