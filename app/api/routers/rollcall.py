@@ -18,9 +18,8 @@ from app.services import attendance_service, log_service, rollcall_service
 
 router = APIRouter(prefix="/api/rollcall", tags=["rollcall"])
 
-# Перекличку (отметку прихода) проводит ТОЛЬКО оператор (роль HR).
-# Администратор управляет системой, но приход не отмечает.
-require_marker = require_any_role(Role.HR)
+# Перекличку (отметку прихода) проводят оператор (роль HR) и администратор.
+require_marker = require_any_role(Role.HR, Role.ADMIN)
 
 MAX_PROOF_BYTES = 10 * 1024 * 1024  # 10 МБ
 ALLOWED_MIME = {

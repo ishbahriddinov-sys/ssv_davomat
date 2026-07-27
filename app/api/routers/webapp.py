@@ -137,8 +137,8 @@ async def stats(
 
 # ==================== Перекличка (оператор HR) ====================
 def _require_operator(user: User) -> None:
-    if user.role != Role.HR:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Йўқламани фақат оператор ўтказади")
+    if user.role not in (Role.HR, Role.ADMIN):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Йўқламани оператор ёки администратор ўтказади")
 
 
 @router.get("/rollcall")

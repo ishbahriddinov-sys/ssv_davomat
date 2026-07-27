@@ -97,8 +97,7 @@ async function boot(){
   document.getElementById("hName").textContent = me.name;
   document.getElementById("hRole").textContent = (ROLE_UZ[me.role]||me.role) + (me.department? " · "+me.department : "");
 
-  if(me.role==="hr") return renderRollcall();
-  if(me.role==="admin") return renderStats();
+  if(me.role==="hr" || me.role==="admin") return renderRollcall();
   return renderHistory();
 }
 
