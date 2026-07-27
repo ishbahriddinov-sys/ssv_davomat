@@ -13,10 +13,16 @@ from sqlalchemy.ext.asyncio import (
 from app.config import settings
 
 # Для внешней БД (Supabase): SSL обязателен; statement_cache_size=0 —
-# совместимость с пулером pgbouncer (transaction mode).
+# совместимость с пулером (Supavisor/pgbouncer). Пулер Supabase отдаёт
+# самоподписанный сертификат, поэтому режим require (шифруем, без проверки цепочки).
 _connect_args: dict = {}
 if settings.is_external_db:
-    _connect_args = {"ssl": True, "statement_cache_size": 0}
+    import ssl as _ssl
+
+    _ctx = _ssl.create_default_context()
+    _ctx.check_hostname = False
+    _ctx.verify_mode = _ssl.CERT_NONE
+    _connect_args = {"ssl": _ctx, "statement_cache_size": 0}
 
 engine = create_async_engine(
     settings.sqlalchemy_dsn,
