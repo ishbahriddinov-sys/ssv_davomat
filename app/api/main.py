@@ -151,13 +151,11 @@ async def telegram_webhook(secret: str, request: Request):
     """Приём обновлений Telegram (webhook-режим)."""
     from aiogram.types import Update
 
-    expected = settings.webhook_secret or "hook"
+    expected = settings.webhook_token
     if secret != expected:
         raise HTTPException(status_code=404, detail="Not found")
     # Дополнительная проверка секретного заголовка Telegram
-    if settings.webhook_secret and request.headers.get(
-        "X-Telegram-Bot-Api-Secret-Token"
-    ) != settings.webhook_secret:
+    if request.headers.get("X-Telegram-Bot-Api-Secret-Token") != expected:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     bot = getattr(app.state, "bot", None)

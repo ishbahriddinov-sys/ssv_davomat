@@ -113,6 +113,14 @@ class Settings(BaseSettings):
         return (self.render_external_url or self.public_base_url or "").rstrip("/")
 
     @property
+    def webhook_token(self) -> str:
+        """Секрет webhook, приведённый к допустимым Telegram символам (A-Za-z0-9_-)."""
+        import re
+
+        safe = re.sub(r"[^A-Za-z0-9_-]", "", self.webhook_secret or "")
+        return safe or "hook"
+
+    @property
     def effective_webapp_url(self) -> str:
         if self.webapp_url:
             return self.webapp_url

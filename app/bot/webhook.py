@@ -19,7 +19,7 @@ logger = get_logger(__name__)
 
 
 def webhook_path() -> str:
-    return f"/telegram/webhook/{settings.webhook_secret or 'hook'}"
+    return f"/telegram/webhook/{settings.webhook_token}"
 
 
 def create_bot_and_dispatcher() -> tuple[Bot, Dispatcher]:
@@ -39,7 +39,7 @@ async def setup_webhook(bot: Bot, dp: Dispatcher) -> None:
     url = base + webhook_path()
     await bot.set_webhook(
         url,
-        secret_token=settings.webhook_secret or None,
+        secret_token=settings.webhook_token,
         drop_pending_updates=True,
         allowed_updates=dp.resolve_used_update_types(),
     )
