@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.enums import AttendanceStatus, CheckMethod
+from app.core.enums import AttendanceStatus, CheckMethod, Role
 from app.db.models import Attendance, Department, User
 from app.services import user_service
 
@@ -55,7 +55,8 @@ async def roster(
     stmt = (
         select(User, Department)
         .join(Department, User.department_id == Department.id, isouter=True)
-        .where(User.is_active.is_(True))
+        # Администраторы проводят перекличку и сами в списке не отмечаются
+        .where(User.is_active.is_(True), User.role != Role.ADMIN)
     )
     if department_id:
         stmt = stmt.where(User.department_id == department_id)
