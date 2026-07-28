@@ -1,0 +1,15 @@
+# Caddy: обратный прокси + автоматический HTTPS (Let's Encrypt).
+# Домен берётся из переменной окружения DOMAIN.
+{$DOMAIN} {
+	encode gzip
+	# Лимит на загрузку документов-доказательств
+	request_body {
+		max_size 12MB
+	}
+	reverse_proxy api:8000
+}
+
+# Поддомен www -> редирект на основной домен
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}

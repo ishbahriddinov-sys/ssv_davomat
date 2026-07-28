@@ -99,6 +99,62 @@ docker compose -p attendance run --rm api python -m app.db.seed_demo
 
 ---
 
+## 🖥 Деплой на свой сервер (VPS) — production
+
+Весь стек в Docker, данные (ПДн) остаются на вашем сервере. HTTPS — автоматически (Caddy + Let's Encrypt).
+
+### Требования
+- Linux-сервер (Ubuntu 22.04+) с публичным IP.
+- Установлены **Docker** и **docker compose**.
+- Домен (напр. `ssvdavomat.uz`), A-запись которого указывает на IP сервера.
+- Открыты порты **80** и **443**.
+
+### Шаги
+```bash
+# 1. Установить Docker (если ещё нет)
+curl -fsSL https://get.docker.com | sh
+
+# 2. Получить код
+git clone https://github.com/ishbahriddinov-sys/ssv_davomat.git
+cd ssv_davomat
+
+# 3. Настроить окружение
+cp .env.prod.example .env
+nano .env          # заполнить: DOMAIN, BOT_TOKEN, POSTGRES_PASSWORD,
+                   #            ENCRYPTION_KEY, SECRET_KEY, JWT_SECRET
+# Сгенерировать ключи:
+#   openssl rand -hex 32                                            -> SECRET_KEY / JWT_SECRET
+#   python3 -c "from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())"  -> ENCRYPTION_KEY
+
+# 4. Запустить
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+
+# 5. Логи
+docker compose -f docker-compose.prod.yml logs -f
+```
+
+После старта (Caddy выпустит сертификат за ~30 сек):
+- **Панель:** `https://<ваш-домен>/admin` (`admin` / `admin123` — смените!)
+- **Mini App:** кнопка «Давомат» в боте (бот работает в режиме polling).
+
+> ⚠️ **Один бот — один токен.** Если раньше был запущен деплой на Render с тем же
+> `BOT_TOKEN`, остановите его (или удалите webhook), иначе бот будет конфликтовать.
+> Удалить webhook: `curl "https://api.telegram.org/bot<TOKEN>/deleteWebhook"`.
+
+### Обновление
+```bash
+git pull
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+### Резервные копии БД
+```bash
+docker compose -f docker-compose.prod.yml exec db \
+  pg_dump -U attendance attendance | gzip > backup_$(date +%F).sql.gz
+```
+
+---
+
 ## ☁️ Бесплатный деплой: Render + Supabase
 
 Приложение (FastAPI + панель + Mini App + Telegram-бот через **webhook**) работает
