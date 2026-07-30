@@ -50,7 +50,14 @@
       "Bash(cd \"/Users/shahobiddin/Desktop/SSV/Бот_посещаемости\" && echo \"=== в проекте ===\" && find . -iname \"*davomat*\" -not -path \"*/.git/*\" -not -path \"*/__pycache__/*\" 2>/dev/null | grep -vi \"ssv-davomat\\\\|davomat_bot\"; echo \"=== на рабочем столе / SSV / Downloads ===\" && ls -lt \"/Users/shahobiddin/Desktop/SSV/\" 2>/dev/null | grep -iE \"davomat|\\\\.xlsx|\\\\.csv|\\\\.docx|\\\\.xls\" | head; ls -lt \"/Users/shahobiddin/Downloads/\" 2>/dev/null | grep -iE \"davomat\" | head; ls -lt \"/Users/shahobiddin/Desktop/\" 2>/dev/null | grep -iE \"davomat\" | head)",
       "Read(//Users/shahobiddin/Desktop/SSV/**)",
       "Read(//Users/shahobiddin/Downloads/**)",
-      "Read(//Users/shahobiddin/Desktop/**)"
+      "Read(//Users/shahobiddin/Desktop/**)",
+      "Bash(echo \"=== приложение \\(может просыпаться ~30-60 сек\\) ===\")",
+      "Bash(curl -s -o /dev/null -w \"health   -> HTTP %{http_code}, %{time_total}s\\\\n\" --max-time 90 https://ssv-davomat.onrender.com/health)",
+      "Bash(curl -s -o /dev/null -w \"панель   -> HTTP %{http_code}\\\\n\" --max-time 30 https://ssv-davomat.onrender.com/admin/login)",
+      "Bash(curl -s -o /dev/null -w \"Mini App -> HTTP %{http_code}\\\\n\" --max-time 30 https://ssv-davomat.onrender.com/api/webapp/)",
+      "Bash(echo \"=== бот ===\")",
+      "Bash(python3 -c \"import sys,json;d=json.load\\(sys.stdin\\)['result'];print\\('webhook:', d.get\\('url'\\) or '\\(пусто\\)'\\);print\\('ошибка:', d.get\\('last_error_message','нет'\\)\\)\")",
+      "Bash(python3 -c ' *)"
     ]
   }
 }
