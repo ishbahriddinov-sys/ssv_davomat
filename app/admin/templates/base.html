@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ title }} — ЎзР ССВ Давомат ҳисоби</title>
   <link rel="icon" type="image/png" href="/static/favicon.png">
-  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/style.css?v=4">
 </head>
 <body>
   <div class="layout">
-    <aside class="sidebar">
+    <div class="scrim" onclick="closeNav()"></div>
+    <aside class="sidebar" id="sidebar">
       <div class="brand">
-        <img src="/static/logo.png" alt="Логотип" class="brand-logo" width="40" height="40">
+        <img src="/static/logo.png" alt="Логотип" class="brand-logo" width="42" height="42">
         <div><b>ЎзР ССВ</b><br><span>Давомат ҳисоби</span></div>
       </div>
       <nav class="nav">
@@ -23,21 +24,26 @@
         {% endfor %}
       </nav>
       <div class="foot">
-        <a href="/admin/logout">🚪 Чиқиш</a>
+        <a href="/admin/logout"><span>🚪</span> Чиқиш</a>
       </div>
     </aside>
     <div class="main">
       <div class="topbar">
+        <button class="menu-btn" onclick="openNav()" aria-label="Меню">☰</button>
         {% set role_names = {'admin':'Администратор','hr':'Оператор (HR)','manager':'Раҳбар','employee':'Ходим'} %}
         <h2>{{ title }}</h2>
-        <span class="chip">Роль: {{ role_names.get(role, role) }}</span>
+        <span class="chip"><span class="role-label">Роль:&nbsp;</span>{{ role_names.get(role, role) }}</span>
       </div>
       <div class="content">
         {% block content %}{% endblock %}
       </div>
     </div>
   </div>
-  <script src="/static/app.js?v=3"></script>
+  <script>
+    function openNav(){ document.getElementById("sidebar").classList.add("open"); document.body.classList.add("nav-open"); }
+    function closeNav(){ document.getElementById("sidebar").classList.remove("open"); document.body.classList.remove("nav-open"); }
+  </script>
+  <script src="/static/app.js?v=4"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>
