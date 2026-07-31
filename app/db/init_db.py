@@ -33,15 +33,32 @@ async def seed() -> None:
             select(AdminUser).where(AdminUser.username == "admin")
         )
         if not res.scalar_one_or_none():
+            pw = settings.admin_password
+            if not pw:
+                if settings.debug:
+                    pw = "admin123"
+                else:
+                    import secrets
+
+                    pw = secrets.token_urlsafe(12)
+                    logger.warning(
+                        "ADMIN_PASSWORD не задан. Сгенерирован временный пароль "
+                        "администратора панели (username=admin): %s — сохраните его и "
+                        "смените. Лучше задайте ADMIN_PASSWORD в окружении.",
+                        pw,
+                    )
             session.add(
                 AdminUser(
                     username="admin",
-                    password_hash=security.hash_password("admin123"),
+                    password_hash=security.hash_password(pw),
                     full_name="Системный администратор",
                     role=Role.ADMIN,
                 )
             )
-            logger.info("Создан администратор панели: admin / admin123 (СМЕНИТЕ ПАРОЛЬ!)")
+            if settings.debug:
+                logger.info("Создан администратор панели: admin / %s (СМЕНИТЕ ПАРОЛЬ!)", pw)
+            else:
+                logger.info("Создан администратор панели: admin (пароль — из ADMIN_PASSWORD/лог выше).")
 
         # --- Bootstrap-администраторы бота из .env ---
         for tg_id in settings.bootstrap_admin_ids:

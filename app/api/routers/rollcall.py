@@ -30,6 +30,25 @@ ALLOWED_MIME = {
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
+ALLOWED_EXT = {".pdf", ".jpg", ".jpeg", ".png", ".heic", ".doc", ".docx"}
+
+
+def validate_proof(content: bytes, filename: str | None, content_type: str | None) -> str:
+    """Проверяет размер, тип и расширение. Возвращает нормализованный MIME или бросает 4xx."""
+    if not content:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Бўш файл")
+    if len(content) > MAX_PROOF_BYTES:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Файл 10 МБ дан катта")
+    ext = PurePath(filename or "").suffix.lower()
+    mime_ok = bool(content_type) and content_type in ALLOWED_MIME
+    ext_ok = ext in ALLOWED_EXT
+    # Требуем совпадение хотя бы по одному признаку, но отвергаем заведомо чужие типы.
+    if not (mime_ok or ext_ok):
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            "Файл тури мос эмас (PDF, JPG, PNG, HEIC, DOC/DOCX)",
+        )
+    return content_type if mime_ok else "application/octet-stream"
 
 
 def _safe_filename(name: str | None) -> str:
@@ -106,16 +125,10 @@ async def mark_absent(
 ):
     filename = mime = None
     content = None
-    if file is not None:
+    if file is not None and file.filename:
         content = await file.read()
-        if len(content) > MAX_PROOF_BYTES:
-            raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                                "Файл 10 МБ дан катта")
-        if file.content_type and file.content_type not in ALLOWED_MIME:
-            raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                                "Файл тури мос эмас (PDF, JPG, PNG, DOC/DOCX)")
-        filename = file.filename
-        mime = file.content_type or "application/octet-stream"
+        mime = validate_proof(content, file.filename, file.content_type)
+        filename = _safe_filename(file.filename)
 
     att = await rollcall_service.mark_absent(
         session, user_id, work_date,

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import reply
 from app.bot.states import AuthStates
-from app.core import security
+from app.core import ratelimit, security
 from app.core.enums import NotificationType
 from app.db.models import User
 from app.i18n import LANG_NAMES, t
@@ -65,8 +65,17 @@ async def enter_corporate_id(
 ):
     data = await state.get_data()
     lang = data.get("language", "ru")
+
+    # Троттлинг: не даём перебирать корпоративные ID/телефоны с одного аккаунта.
+    rl_key = f"botauth:{message.from_user.id}"
+    blocked, retry = await ratelimit.is_blocked(rl_key)
+    if blocked:
+        await message.answer(t("corporate_id_not_found", lang))
+        return
+
     user = await user_service.get_by_corporate_id(session, message.text.strip())
     if not user or not user.is_active:
+        await ratelimit.register_failure(rl_key)
         await message.answer(t("corporate_id_not_found", lang))
         return
 
@@ -94,8 +103,27 @@ async def verify_contact(
         await state.clear()
         return
 
-    if not await user_service.verify_phone(user, contact.phone_number):
+    # Контакт должен принадлежать самому отправителю. Только контакт, отправленный
+    # кнопкой «Поделиться номером», несёт user_id == отправитель. Пересланная карточка
+    # чужого контакта (подмена номера ради захвата чужого аккаунта) — отклоняется.
+    if contact.user_id is None or contact.user_id != message.from_user.id:
         await message.answer(t("phone_mismatch", lang))
+        return
+
+    if not await user_service.verify_phone(user, contact.phone_number):
+        await ratelimit.register_failure(f"botauth:{message.from_user.id}")
+        await message.answer(t("phone_mismatch", lang))
+        return
+
+    # Не позволяем «перепривязать» уже привязанный аккаунт к другому Telegram
+    # без участия администратора (защита от угона учётной записи).
+    if user.telegram_id and user.telegram_id != message.from_user.id:
+        await message.answer(t("phone_mismatch", lang))
+        await log_service.log_action(
+            session, "auth.rebind_blocked", actor_id=user.id,
+            actor_telegram_id=message.from_user.id, entity="user", entity_id=user.id,
+        )
+        await session.commit()
         return
 
     # Если у сотрудника роль администратора и включена 2FA — запросим TOTP
@@ -138,6 +166,7 @@ async def _finish_auth(
     lang: str,
 ):
     await user_service.bind_telegram(session, user, message.from_user.id, lang)
+    await ratelimit.clear(f"botauth:{message.from_user.id}")
     await log_service.log_action(
         session,
         "auth.login",

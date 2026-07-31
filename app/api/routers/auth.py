@@ -38,6 +38,8 @@ async def login(
         select(AdminUser).where(AdminUser.username == form.username)
     )
     admin = res.scalar_one_or_none()
+    if not admin:
+        security.dummy_verify()  # выравниваем тайминг, чтобы не выдать существование логина
     if not admin or not security.verify_password(form.password, admin.password_hash):
         await ratelimit.register_failure(ident)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Логин ёки парол нотўғри")

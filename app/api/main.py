@@ -26,6 +26,12 @@ from app.core.logging import setup_logging
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_logging()
+
+    # Прерываем запуск, если в production остались дефолтные секреты (подделка токенов).
+    from app.core import security as _security
+
+    _security.assert_secure_config()
+
     app.state.bot = None
     app.state.dp = None
     scheduler = None
@@ -106,6 +112,47 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
+
+
+# Заголовки безопасности для всех ответов.
+# CSP допускает inline-скрипты (в шаблонах есть onclick/inline <script>) и нужные CDN:
+#   • панель загружает Chart.js с cdn.jsdelivr.net;
+#   • Mini App загружает telegram-web-app.js с telegram.org и встраивается в Telegram.
+_CSP_PANEL = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data:; font-src 'self' data:; "
+    "connect-src 'self'; object-src 'none'; base-uri 'self'; "
+    "form-action 'self'; frame-ancestors 'none'"
+)
+_CSP_WEBAPP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' https://telegram.org; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data: https:; font-src 'self' data:; "
+    "connect-src 'self'; object-src 'none'; base-uri 'self'; "
+    "form-action 'self'; frame-ancestors https://*.telegram.org 'self'"
+)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    is_webapp = request.url.path.startswith("/api/webapp")
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(self), microphone=(), camera=()"
+    if is_webapp:
+        # Telegram встраивает Mini App в iframe — не запрещаем фрейминг телеграму.
+        response.headers["Content-Security-Policy"] = _CSP_WEBAPP
+    else:
+        response.headers["Content-Security-Policy"] = _CSP_PANEL
+        response.headers["X-Frame-Options"] = "DENY"
+    # HSTS только под HTTPS (production), чтобы не ломать локальный http.
+    if not settings.debug:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 # REST API
 app.include_router(auth.router)

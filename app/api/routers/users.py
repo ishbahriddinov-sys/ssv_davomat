@@ -15,12 +15,13 @@ from app.services import log_service, user_service
 router = APIRouter(prefix="/api/users", tags=["users"])
 
 
-def _to_out(user: User) -> UserOut:
+def _to_out(user: User, *, include_phone: bool = True) -> UserOut:
     return UserOut(
         id=user.id,
         corporate_id=user.corporate_id,
         full_name=user_service.decrypt_name(user),
-        phone=user_service.decrypt_phone(user),
+        # Телефон — ПДн: отдаём только полноправному администратору.
+        phone=user_service.decrypt_phone(user) if include_phone else None,
         position=user.position,
         department_id=user.department_id,
         role=user.role,
@@ -38,7 +39,8 @@ async def list_users(
     res = await session.execute(
         select(User).where(User.role != Role.ADMIN).order_by(User.id)
     )
-    return [_to_out(u) for u in res.scalars().all()]
+    include_phone = admin.role == Role.ADMIN
+    return [_to_out(u, include_phone=include_phone) for u in res.scalars().all()]
 
 
 @router.post("", response_model=UserOut, status_code=201)

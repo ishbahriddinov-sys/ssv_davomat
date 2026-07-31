@@ -104,6 +104,8 @@ async def do_login(
     )
     admin = res.scalar_one_or_none()
     error = None
+    if not admin:
+        security.dummy_verify()  # выравниваем тайминг ответа (анти-перечисление логинов)
     if not admin or not security.verify_password(password, admin.password_hash):
         error = "Логин ёки парол нотўғри"
     elif not admin.is_active:

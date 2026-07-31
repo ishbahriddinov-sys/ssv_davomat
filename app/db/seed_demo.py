@@ -122,8 +122,30 @@ async def seed() -> None:
         logger.info("Добавлено тестовых сотрудников: %s", created)
 
 
+def _guard_destructive() -> None:
+    """Отказываемся выполнять DROP SCHEMA без явного подтверждения.
+
+    Требуется переменная окружения ALLOW_DEMO_RESET=1 И выключенный production
+    (DEBUG=true). Иначе случайный запуск против боевой БД сотрёт все данные.
+    """
+    import os
+
+    from app.config import settings
+
+    if os.getenv("ALLOW_DEMO_RESET") != "1":
+        raise SystemExit(
+            "ОТКАЗ: seed_demo пересоздаёт схему и удаляет ВСЕ данные. "
+            "Запуск разрешён только с ALLOW_DEMO_RESET=1 на демо-базе."
+        )
+    if not settings.debug:
+        raise SystemExit(
+            "ОТКАЗ: DEBUG=false (похоже на production). Демо-сброс запрещён."
+        )
+
+
 async def main() -> None:
     setup_logging()
+    _guard_destructive()
     await reset_schema()
     await seed()
     logger.info("Демо-данные готовы.")

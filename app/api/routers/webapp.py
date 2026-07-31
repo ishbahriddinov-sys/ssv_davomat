@@ -196,16 +196,14 @@ async def rc_absent(
     session: AsyncSession = Depends(get_db),
 ):
     _require_operator(user)
+    from app.api.routers.rollcall import validate_proof
+
     filename = mime = None
     content = None
-    if file is not None:
+    if file is not None and file.filename:
         content = await file.read()
-        if len(content) > MAX_PROOF_BYTES:
-            raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Файл 10 МБ дан катта")
-        if file.content_type and file.content_type not in ALLOWED_MIME:
-            raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Файл тури мос эмас")
-        filename = file.filename
-        mime = file.content_type or "application/octet-stream"
+        mime = validate_proof(content, file.filename, file.content_type)
+        filename = _safe_filename(file.filename)
 
     att = await rollcall_service.mark_absent(
         session, user_id, work_date,

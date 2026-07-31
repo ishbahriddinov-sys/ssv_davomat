@@ -53,5 +53,8 @@ async def update_department(
     dept.code = payload.code
     dept.parent_id = payload.parent_id
     dept.manager_id = payload.manager_id
+    await log_service.log_action(
+        session, "api.dept.update", entity="department", entity_id=dept.id
+    )
     await session.commit()
     return dept

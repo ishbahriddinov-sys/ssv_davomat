@@ -74,10 +74,15 @@ async def set_language(session: AsyncSession, user: User, language: str) -> None
 
 
 async def verify_phone(user: User, phone: str) -> bool:
-    """Сравнивает присланный телефон с сохранённым (нормализуя цифры)."""
+    """Сравнивает присланный телефон с сохранённым (нормализуя цифры).
+
+    Fail-closed: если у аккаунта нет телефона на файле, подтвердить владение
+    невозможно — доступ НЕ выдаём (иначе любой знающий корпоративный ID мог бы
+    привязать чужой аккаунт, включая администраторский).
+    """
     stored = security.decrypt(user.phone_enc)
     if not stored:
-        return True  # телефон не задан — пропускаем проверку
+        return False
     return _digits(stored) == _digits(phone)
 
 

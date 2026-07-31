@@ -15,6 +15,48 @@ from app.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# Фиктивный bcrypt-хэш для выравнивания времени ответа (защита от перечисления
+# логинов по таймингу). Verify выполняется даже когда пользователь не найден.
+_dummy_hash: str | None = None
+
+
+def _get_dummy_hash() -> str:
+    global _dummy_hash
+    if _dummy_hash is None:
+        _dummy_hash = pwd_context.hash("timing-equalizer")
+    return _dummy_hash
+
+
+def assert_secure_config() -> None:
+    """В production (DEBUG=false) запрещаем работу с дефолтными секретами.
+
+    С дефолтным JWT_SECRET любой может подделать токен администратора, поэтому
+    небезопасный запуск лучше прервать явной ошибкой, чем «тихо» работать.
+    """
+    if settings.debug:
+        return
+    weak: list[str] = []
+    if not settings.jwt_secret or settings.jwt_secret.strip().lower().startswith("change-me"):
+        weak.append("JWT_SECRET")
+    if not settings.secret_key or settings.secret_key.strip().lower().startswith("change-me"):
+        weak.append("SECRET_KEY")
+    if len(settings.jwt_secret or "") < 16:
+        weak.append("JWT_SECRET (слишком короткий, нужно ≥16 символов)")
+    if weak:
+        raise RuntimeError(
+            "Небезопасная конфигурация для production: задайте надёжные значения — "
+            + ", ".join(weak)
+            + ". Пример: openssl rand -hex 32"
+        )
+
+
+def dummy_verify() -> None:
+    """Тратит примерно столько же времени, сколько verify_password, но всегда False."""
+    try:
+        pwd_context.verify("timing", _get_dummy_hash())
+    except Exception:  # noqa: BLE001
+        pass
+
 
 # ==================== Шифрование ПДн (Fernet) ====================
 def _get_fernet() -> Fernet:
